@@ -1,0 +1,28 @@
+[project]
+name = 'circlecare'
+description = 'Care-centered expense sharing on Stacks'
+authors = []
+telemetry = true
+cache_dir = './.cache'
+requirements = []
+[contracts.circle-factory]
+path = 'contracts/circle-factory.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.circle-treasury]
+path = 'contracts/circle-treasury.clar'
+clarity_version = 4
+epoch = 'latest'
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.check_checker]
+strict = true
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
+
+[repl.remote_data]
+enabled = false
+api_url = 'https://api.hiro.so'
