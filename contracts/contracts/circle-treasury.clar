@@ -184,8 +184,6 @@
       (circle (unwrap! (map-get? circles circle-id) ERR-CIRCLE-NOT-FOUND))
       (expense-id (get next-expense-id circle))
       (participant-count (len participants))
-      (share-per-person (/ amount participant-count))
-      (remainder (mod amount participant-count))
       (member-key {circle-id: circle-id, member: tx-sender})
     )
     ;; Validations
@@ -200,27 +198,34 @@
     ;; Validate all participants are active members
     (try! (validate-participants circle-id participants))
 
-    ;; Store expense with stacks-block-time
-    (map-set expenses {circle-id: circle-id, expense-id: expense-id} {
-      description: description,
-      total-amount: amount,
-      paid-by: tx-sender,
-      settled: false,
-      timestamp: stacks-block-time,
-      expires-at: none,
-      participant-count: participant-count
-    })
+    ;; Calculate shares after validation
+    (let
+      (
+        (share-per-person (/ amount participant-count))
+        (remainder (mod amount participant-count))
+      )
+      ;; Store expense with stacks-block-time
+      (map-set expenses {circle-id: circle-id, expense-id: expense-id} {
+        description: description,
+        total-amount: amount,
+        paid-by: tx-sender,
+        settled: false,
+        timestamp: stacks-block-time,
+        expires-at: none,
+        participant-count: participant-count
+      })
 
-    ;; Process participants and update balances
-    (try! (process-participants circle-id expense-id participants share-per-person remainder tx-sender))
+      ;; Process participants and update balances
+      (try! (process-participants circle-id expense-id participants share-per-person remainder tx-sender))
 
-    ;; Update next expense ID
-    (map-set circles circle-id (merge circle {
-      next-expense-id: (+ expense-id u1)
-    }))
+      ;; Update next expense ID
+      (map-set circles circle-id (merge circle {
+        next-expense-id: (+ expense-id u1)
+      }))
 
-    (print {event: "expense-added", circle-id: circle-id, expense-id: expense-id, amount: amount})
-    (ok expense-id)
+      (print {event: "expense-added", circle-id: circle-id, expense-id: expense-id, amount: amount})
+      (ok expense-id)
+    )
   )
 )
 

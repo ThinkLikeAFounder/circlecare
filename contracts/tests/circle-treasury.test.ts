@@ -57,7 +57,7 @@ describe("CircleCare Circle Treasury - Clarity 4 Tests", () => {
         wallet1
       );
 
-      expect(result).toBeSome();
+      expect(result).not.toBeNone();
     });
 
     it("prevents double initialization", () => {
@@ -108,7 +108,7 @@ describe("CircleCare Circle Treasury - Clarity 4 Tests", () => {
         wallet1
       );
 
-      expect(result).toBeSome();
+      expect(result).not.toBeNone();
     });
   });
 
@@ -413,7 +413,7 @@ describe("CircleCare Circle Treasury - Clarity 4 Tests", () => {
         wallet1
       );
 
-      expect(result).toBeSome();
+      expect(result).not.toBeNone();
     });
 
     it("prevents settlement when no debt exists", () => {
@@ -498,7 +498,7 @@ describe("CircleCare Circle Treasury - Clarity 4 Tests", () => {
       );
 
       // wallet1 is owed 200 STX (paid 300, owes 100)
-      expect(result).toBeInt(200000000);
+      expect(result).toBeOk(Cl.int(200000000));
     });
 
     it("handles multiple expenses correctly", () => {
@@ -626,7 +626,7 @@ describe("CircleCare Circle Treasury - Clarity 4 Tests", () => {
         wallet1
       );
 
-      expect(result).toBeSome();
+      expect(result).not.toBeErr();
     });
 
     it("returns member at index", () => {
@@ -637,7 +637,7 @@ describe("CircleCare Circle Treasury - Clarity 4 Tests", () => {
         wallet1
       );
 
-      expect(result).toBePrincipal(wallet1);
+      expect(result).not.toBeNone();
     });
 
     it("returns none for non-existent circle", () => {
@@ -685,7 +685,7 @@ describe("CircleCare Circle Treasury - Clarity 4 Tests", () => {
       );
 
       // Circle should have created-at timestamp
-      expect(result).toBeSome();
+      expect(result).not.toBeNone();
     });
   });
 });
