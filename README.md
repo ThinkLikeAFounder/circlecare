@@ -194,15 +194,45 @@ cd frontend
 npm run build
 ```
 
+## Documentation
+
+Comprehensive documentation is available in the `/docs` directory:
+
+### 📚 Complete Documentation
+- **[Documentation Hub](docs/README.md)** - Start here for all documentation
+
+### 🚀 User Resources
+- **[User Guide](docs/USER_GUIDE.md)** - Complete usage instructions
+- **[FAQ](docs/FAQ.md)** - Frequently asked questions
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+
+### 🏗️ Developer Resources
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
+- **[API Reference](docs/API.md)** - Complete contract API documentation
+- **[Clarity 4 Features](docs/CLARITY_4_FEATURES.md)** - How we leverage Clarity 4
+- **[Contributing](docs/CONTRIBUTING.md)** - Development guidelines and standards
+- **[Deployment](docs/DEPLOYMENT.md)** - Deployment and infrastructure guide
+
+### 🔧 Technical Resources
+- **[TypeScript Types](types/contracts.ts)** - Complete type definitions
+- **[Contract Tests](contracts/tests/)** - Comprehensive test suite
+- **[Contract Documentation](contracts/contracts/)** - Inline code documentation
+
 ## Contributing
 
-We welcome contributions! Please see our contributing guidelines:
+We welcome contributions! Please see our [Contributing Guide](docs/CONTRIBUTING.md) for detailed guidelines:
 
 1. Check existing issues or create a new one
 2. Fork the repository
 3. Create a feature branch
 4. Make your changes with tests
 5. Submit a pull request
+
+For quick contributions:
+- 🐛 **Bug Reports**: Use GitHub Issues
+- 💡 **Feature Requests**: Create detailed GitHub Issues
+- 📝 **Documentation**: Improve our docs
+- 🔧 **Code**: Follow our development guidelines
 
 ## Roadmap
 
@@ -234,12 +264,25 @@ MIT License - see [LICENSE](LICENSE) file for details
 - Powered by [Clarity 4](https://docs.stacks.co/whats-new/clarity-4-is-now-live)
 - Developed for [Talent Protocol Builder Challenge](https://talentprotocol.com/)
 
-## Support
+## Support & Community
 
-- **Documentation**: [docs.circlecare.xyz](https://docs.circlecare.xyz)
-- **Discord**: [Join our community](https://discord.gg/circlecare)
-- **Twitter**: [@CircleCare_xyz](https://twitter.com/circlecare_xyz)
-- **Issues**: [GitHub Issues](https://github.com/ThinkLikeAFounder/circlecare/issues)
+### 📖 Documentation & Help
+- **[Complete Documentation](docs/README.md)** - All guides and references
+- **[User Guide](docs/USER_GUIDE.md)** - Get started with CircleCare
+- **[FAQ](docs/FAQ.md)** - Quick answers to common questions
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Solve issues quickly
+
+### 🤝 Community & Support
+- **[Discord](https://discord.gg/circlecare)** - Real-time community support
+- **[GitHub Issues](https://github.com/ThinkLikeAFounder/circlecare/issues)** - Bug reports and feature requests
+- **[GitHub Discussions](https://github.com/ThinkLikeAFounder/circlecare/discussions)** - Community discussions
+- **[Twitter @CircleCare_xyz](https://twitter.com/circlecare_xyz)** - Updates and announcements
+
+### 🛠️ Developer Resources
+- **[API Documentation](docs/API.md)** - Contract interfaces and examples
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and components
+- **[Contributing Guide](docs/CONTRIBUTING.md)** - How to contribute code
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Setup and deployment instructions
 
 ---
 
