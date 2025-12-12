@@ -37,6 +37,21 @@ export default defineConfig({
         // add or override options
       },
     },
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      threshold: {
+        lines: 95,
+        functions: 95,
+        branches: 90,
+        statements: 95
+      },
+      exclude: [
+        'tests/helpers/**',
+        '**/*.test.ts'
+      ]
+    },
+    testTimeout: 30000,
+    hookTimeout: 30000
   },
 });
 
