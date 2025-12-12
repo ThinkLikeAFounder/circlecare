@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { WalletConnect } from './WalletConnect';
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,9 +30,7 @@ export function Navigation() {
             <Link href="/docs" className="text-gray-600 hover:text-blue-600 transition-colors">
               Docs
             </Link>
-            <button className="btn-primary">
-              Launch App
-            </button>
+            <WalletConnect />
           </div>
 
           {/* Mobile menu button */}
@@ -53,30 +52,30 @@ export function Navigation() {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col space-y-4">
-              <Link 
-                href="/about" 
+              <Link
+                href="/about"
                 className="text-gray-600 hover:text-blue-600 transition-colors px-2 py-1"
                 onClick={() => setIsOpen(false)}
               >
                 About
               </Link>
-              <Link 
-                href="/how-it-works" 
+              <Link
+                href="/how-it-works"
                 className="text-gray-600 hover:text-blue-600 transition-colors px-2 py-1"
                 onClick={() => setIsOpen(false)}
               >
                 How It Works
               </Link>
-              <Link 
-                href="/docs" 
+              <Link
+                href="/docs"
                 className="text-gray-600 hover:text-blue-600 transition-colors px-2 py-1"
                 onClick={() => setIsOpen(false)}
               >
                 Docs
               </Link>
-              <button className="btn-primary w-full mt-4">
-                Launch App
-              </button>
+              <div className="mt-4">
+                <WalletConnect />
+              </div>
             </div>
           </div>
         )}
