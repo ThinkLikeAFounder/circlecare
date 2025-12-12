@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { StacksProvider } from '../lib/StacksProvider';
+import { Navigation } from '../components/Navigation';
 
 export const metadata: Metadata = {
   title: {
@@ -83,7 +85,10 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body className="antialiased">
-        {children}
+        <StacksProvider>
+          <Navigation />
+          {children}
+        </StacksProvider>
       </body>
     </html>
   );
