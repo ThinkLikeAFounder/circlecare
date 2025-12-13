@@ -139,9 +139,17 @@ Expenses can now have:
 
 ### 4. Enhanced Serialization (`to-ascii?`)
 Convert principals, amounts, and other data to ASCII for:
-- Better logging and events
+- Human-readable expense receipts
+- Better logging and events (principals and amounts in ASCII)
 - Cross-chain message formatting
-- Human-readable receipts
+- Readable settlement types
+
+### 5. Passkey Authentication (`secp256r1-verify`)
+Complete implementation of secure, passwordless access:
+- Register passkeys (TouchID, FaceID, YubiKey)
+- Verify signatures for critical operations
+- Optional passkey requirement for circles
+- Multi-signature settlement support
 
 ## Key Features
 

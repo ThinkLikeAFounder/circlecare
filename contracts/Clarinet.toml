@@ -8,12 +8,12 @@ requirements = []
 [contracts.circle-factory]
 path = 'contracts/circle-factory.clar'
 clarity_version = 4
-epoch = 'latest'
+epoch = '3.0'
 
 [contracts.circle-treasury]
 path = 'contracts/circle-treasury.clar'
 clarity_version = 4
-epoch = 'latest'
+epoch = '3.0'
 [repl.analysis]
 passes = ['check_checker']
 
