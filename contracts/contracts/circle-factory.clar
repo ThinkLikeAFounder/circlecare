@@ -14,6 +14,10 @@
 (define-constant ERR-HASH-MISMATCH (err u109))
 (define-constant ERR-CONVERSION (err u110))
 (define-constant ERR-TREASURY-ALREADY-SET (err u111))
+(define-constant ERR-PASSKEY-NOT-FOUND (err u112))
+(define-constant ERR-PASSKEY-EXISTS (err u113))
+(define-constant ERR-INVALID-SIGNATURE (err u114))
+(define-constant ERR-PASSKEY-REQUIRED (err u115))
 
 ;; Contract Owner
 (define-constant CONTRACT-OWNER tx-sender)
@@ -52,6 +56,25 @@
 )
 
 (define-data-var all-circles-count uint u0)
+
+;; Passkey registry for secp256r1 authentication
+(define-map passkeys
+  principal
+  {
+    public-key: (buff 33),
+    registered-at: uint,
+    enabled: bool
+  }
+)
+
+;; Circle passkey requirements
+(define-map circle-passkey-config
+  uint
+  {
+    require-passkey: bool,
+    creator-only: bool
+  }
+)
 
 ;; Public Functions
 
@@ -313,4 +336,126 @@
 ;; Get total fees collected
 (define-read-only (get-total-fees-collected)
   (var-get total-fees-collected)
+)
+
+;; Passkey Authentication Functions (Clarity 4 secp256r1-verify)
+
+;; Register a passkey for authentication
+(define-public (register-passkey (public-key (buff 33)))
+  (let
+    (
+      (existing-passkey (map-get? passkeys tx-sender))
+    )
+    ;; Check if passkey already exists
+    (asserts! (is-none existing-passkey) ERR-PASSKEY-EXISTS)
+    
+    ;; Store passkey
+    (map-set passkeys tx-sender {
+      public-key: public-key,
+      registered-at: stacks-block-time,
+      enabled: true
+    })
+    
+    (print {
+      event: "passkey-registered",
+      principal: tx-sender,
+      timestamp: stacks-block-time
+    })
+    (ok true)
+  )
+)
+
+;; Update passkey (disable/enable)
+(define-public (update-passkey-status (enabled bool))
+  (let
+    (
+      (passkey (unwrap! (map-get? passkeys tx-sender) ERR-PASSKEY-NOT-FOUND))
+    )
+    (map-set passkeys tx-sender (merge passkey {enabled: enabled}))
+    (print {event: "passkey-status-updated", principal: tx-sender, enabled: enabled})
+    (ok true)
+  )
+)
+
+;; Verify passkey signature using secp256r1-verify
+(define-public (verify-passkey-signature 
+  (message-hash (buff 32))
+  (signature (buff 64))
+  (signer principal))
+  (let
+    (
+      (passkey (unwrap! (map-get? passkeys signer) ERR-PASSKEY-NOT-FOUND))
+    )
+    (asserts! (get enabled passkey) ERR-PASSKEY-NOT-FOUND)
+    (asserts! 
+      (secp256r1-verify message-hash signature (get public-key passkey))
+      ERR-INVALID-SIGNATURE
+    )
+    (ok true)
+  )
+)
+
+;; Set passkey requirement for a circle
+(define-public (set-circle-passkey-requirement 
+  (circle-id uint)
+  (require-passkey bool)
+  (creator-only bool))
+  (let
+    (
+      (circle (unwrap! (map-get? circles circle-id) ERR-CIRCLE-NOT-FOUND))
+    )
+    (asserts! (is-eq tx-sender (get creator circle)) ERR-UNAUTHORIZED)
+    
+    (map-set circle-passkey-config circle-id {
+      require-passkey: require-passkey,
+      creator-only: creator-only
+    })
+    
+    (print {
+      event: "circle-passkey-config-updated",
+      circle-id: circle-id,
+      require-passkey: require-passkey
+    })
+    (ok true)
+  )
+)
+
+;; Get passkey info
+(define-read-only (get-passkey-info (user principal))
+  (map-get? passkeys user)
+)
+
+;; Get circle passkey config
+(define-read-only (get-circle-passkey-config (circle-id uint))
+  (default-to {require-passkey: false, creator-only: false}
+    (map-get? circle-passkey-config circle-id))
+)
+
+;; ASCII Conversion Functions (Clarity 4 to-ascii?)
+
+;; Generate human-readable circle receipt
+(define-read-only (generate-circle-receipt (circle-id uint))
+  (match (map-get? circles circle-id)
+    circle
+      (ok {
+        circle-id: circle-id,
+        name: (get name circle),
+        creator-ascii: (to-ascii? (get creator circle)),
+        created-at: (get created-at circle),
+        created-at-ascii: (to-ascii? (get created-at circle)),
+        active: (get active circle),
+        active-ascii: (to-ascii? (get active circle))
+      })
+    ERR-CIRCLE-NOT-FOUND
+  )
+)
+
+;; Convert principal to ASCII for logging
+(define-read-only (principal-to-ascii (p principal))
+  (to-ascii? p)
+)
+
+;; Convert uint to ASCII for logging
+(define-read-only (uint-to-ascii (n uint))
+  (to-ascii? n)
 )

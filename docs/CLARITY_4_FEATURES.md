@@ -79,6 +79,7 @@ Enables time-based logic for expense management and automated settlements.
 - Expense dispute resolution timeouts
 - Automated settlement triggers
 
+
 ### 4. ASCII Conversion (`to-ascii?`)
 
 #### Purpose
@@ -86,17 +87,19 @@ Improves data serialization and cross-chain compatibility.
 
 #### Implementation
 ```clarity
-(define-read-only (get-expense-receipt (expense-id uint))
-  (let ((expense (unwrap! (get-expense expense-id) (err u404))))
-    (ok (concat 
-      "Expense: " 
-      (unwrap! (to-ascii? (get description expense)) (err u400))
-      " Amount: "
-      (unwrap! (to-ascii? (get amount expense)) (err u400))))))
+(define-read-only (generate-expense-receipt (circle-id uint) (expense-id uint))
+  (match (get-expense circle-id expense-id)
+    expense
+      (ok {
+        description: (get description expense),
+        amount-ascii: (to-ascii? (get total-amount expense)),
+        paid-by-ascii: (to-ascii? (get paid-by expense))
+      })
+    ERR-EXPENSE-NOT-FOUND))
 ```
 
 #### Benefits
-- Human-readable transaction logs
+- Human-readable transaction logs using `print` events
 - Better event emission for off-chain services
 - Cross-chain message formatting
 
@@ -108,26 +111,38 @@ Improves data serialization and cross-chain compatibility.
 ### 5. Secp256r1 Verification (`secp256r1-verify`)
 
 #### Purpose
-Foundation for future passkey authentication implementation.
+Foundation for passkey authentication, enabling passwordless and secure circle access.
 
-#### Implementation (Planned)
+#### Implementation
 ```clarity
-(define-public (authenticate-with-passkey 
-  (message (buff 32))
+(define-public (verify-passkey-signature 
+  (message-hash (buff 32))
   (signature (buff 64))
-  (public-key (buff 33)))
-  (ok (secp256r1-verify message signature public-key)))
+  (signer principal))
+  (let
+    (
+      (passkey (unwrap! (map-get? passkeys signer) ERR-PASSKEY-NOT-FOUND))
+    )
+    (asserts! (get enabled passkey) ERR-PASSKEY-NOT-FOUND)
+    (asserts! 
+      (secp256r1-verify message-hash signature (get public-key passkey))
+      ERR-INVALID-SIGNATURE
+    )
+    (ok true)
+  )
+)
 ```
 
 #### Benefits
-- Modern authentication without seed phrases
-- Enhanced user experience
-- Hardware security key support
+- Modern authentication using WebAuthn/Passkeys (TouchID, FaceID)
+- Enhanced user experience (no seed phrases needed for daily auth)
+- Hardware security key support (YubiKey)
+- Multi-signature settlement capabilities
 
 #### Use Cases
 - Passwordless circle access
-- Secure transaction signing
-- Multi-factor authentication
+- Secure transaction signing for settlements
+- Multi-factor authentication for high-value circles
 
 ## Performance Optimizations
 
@@ -149,11 +164,6 @@ Foundation for future passkey authentication implementation.
 3. Test extensively on testnet
 4. Deploy with backward compatibility
 
-### Feature Rollout
-- Phase 1: Core security features (`contract-hash?`, `restrict-assets?`)
-- Phase 2: Time-based functionality (`stacks-block-time`)
-- Phase 3: Enhanced UX (`to-ascii?`, `secp256r1-verify`)
-
 ## Testing Strategy
 
 ### Unit Tests
@@ -170,17 +180,3 @@ Foundation for future passkey authentication implementation.
 - Real-world scenario testing
 - Community feedback integration
 - Performance monitoring
-
-## Future Enhancements
-
-### Planned Features
-- Cross-chain asset support using Clarity 4 bridges
-- Advanced time-based automation
-- Enhanced privacy features
-- Improved developer tooling
-
-### Community Contributions
-- Feature request evaluation
-- Community-driven testing
-- Documentation improvements
-- Educational content creation
