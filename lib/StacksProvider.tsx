@@ -2,10 +2,12 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppConfig, UserSession, showConnect } from '@stacks/connect';
+import { StacksMainnet, StacksTestnet, StacksNetwork } from '@stacks/network';
 
 interface StacksContextType {
   userAddress: string | null;
   network: 'testnet' | 'mainnet';
+  stacksNetwork: StacksNetwork;
   isConnected: boolean;
   isLoading: boolean;
   connect: () => void;
@@ -22,9 +24,16 @@ const NETWORK_STORAGE_KEY = 'circlecare_network';
 
 export function StacksProvider({ children }: { children: ReactNode }) {
   const [userAddress, setUserAddress] = useState<string | null>(null);
-  const [network, setNetwork] = useState<'testnet' | 'mainnet'>('testnet');
+  const [network, setNetwork] = useState<'testnet' | 'mainnet'>(
+    (process.env.NEXT_PUBLIC_NETWORK as 'testnet' | 'mainnet') || 'testnet'
+  );
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Create network instance based on current network
+  const stacksNetwork = network === 'mainnet'
+    ? new StacksMainnet()
+    : new StacksTestnet();
 
   useEffect(() => {
     // Load saved network preference
@@ -62,13 +71,17 @@ export function StacksProvider({ children }: { children: ReactNode }) {
     showConnect({
       appDetails: {
         name: 'CircleCare',
-        icon: '/icon.png',
+        icon: window.location.origin + '/icon.png',
       },
       redirectTo: '/',
       onFinish: () => {
         window.location.reload();
       },
       userSession,
+      // Enable WalletConnect for mobile wallets (Leather mobile, Xverse mobile, etc.)
+      ...(process.env.NEXT_PUBLIC_WC_PROJECT_ID && {
+        walletConnectProjectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID
+      })
     });
   };
 
@@ -96,6 +109,7 @@ export function StacksProvider({ children }: { children: ReactNode }) {
     <StacksContext.Provider value={{
       userAddress,
       network,
+      stacksNetwork,
       isConnected,
       isLoading,
       connect,
