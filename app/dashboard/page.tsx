@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useStacks } from '@/lib/StacksProvider';
+import { useUserCircles, useCreateCircle } from '@/lib/hooks/useCircles';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -13,14 +14,18 @@ import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isConnected, isLoading: walletLoading } = useStacks();
+  const { isConnected, isLoading: walletLoading, userAddress } = useStacks();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [circleName, setCircleName] = useState('');
   const [nickname, setNickname] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [circles, setCircles] = useState<number[]>([]);
 
-  if (walletLoading) {
+  // Fetch user's circles
+  const { data: circles = [], isLoading: circlesLoading, error: circlesError } = useUserCircles();
+
+  // Create circle mutation
+  const createCircleMutation = useCreateCircle();
+
+  if (walletLoading || circlesLoading) {
     return (
       <div className="container mx-auto px-4 py-20 flex justify-center">
         <LoadingSpinner message="Loading..." />
@@ -41,20 +46,35 @@ export default function DashboardPage() {
     );
   }
 
+  if (circlesError) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center">
+        <h1 className="text-4xl font-bold mb-4 text-red-500">
+          Error Loading Circles
+        </h1>
+        <p className="text-white/60 mb-8">
+          {circlesError instanceof Error ? circlesError.message : 'Failed to load circles'}
+        </p>
+      </div>
+    );
+  }
+
   const handleCreateCircle = async () => {
     if (!circleName || !nickname) return;
 
     try {
-      setIsLoading(true);
-      // TODO: Implement actual contract call
-      console.log('Creating circle:', { circleName, nickname });
+      await createCircleMutation.mutateAsync({
+        name: circleName,
+        nickname: nickname,
+      });
+
+      // Close modal and reset form on success
       setIsCreateModalOpen(false);
       setCircleName('');
       setNickname('');
     } catch (error) {
       console.error('Failed to create circle:', error);
-    } finally {
-      setIsLoading(false);
+      // Error is already handled by the mutation
     }
   };
 
@@ -142,8 +162,8 @@ export default function DashboardPage() {
             </Button>
             <Button
               onClick={handleCreateCircle}
-              isLoading={isLoading}
-              disabled={!circleName || !nickname}
+              isLoading={createCircleMutation.isPending}
+              disabled={!circleName || !nickname || createCircleMutation.isPending}
               className="flex-1"
             >
               Create Circle

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { StacksProvider } from '../lib/StacksProvider';
+import { Providers } from './providers';
 import { Navigation } from '../components/Navigation';
 
 export const metadata: Metadata = {
@@ -85,10 +85,10 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body className="antialiased">
-        <StacksProvider>
+        <Providers>
           <Navigation />
           {children}
-        </StacksProvider>
+        </Providers>
       </body>
     </html>
   );
