@@ -44,3 +44,7 @@ next-env.d.ts
 # OS
 .DS_Store
 Thumbs.db
+
+# Documentation (keep local only)
+docs/*.md
+*.md
