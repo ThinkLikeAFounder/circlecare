@@ -696,4 +696,441 @@ describe("CircleCare Circle Treasury - Clarity 4 Tests", () => {
       expect(result).not.toBeNone();
     });
   });
+
+  describe("Bulk Operations", () => {
+    beforeEach(() => {
+      simnet.callPublicFn(
+        "circle-treasury",
+        "initialize-circle",
+        [
+          Cl.uint(1),
+          Cl.stringAscii("Bulk Circle"),
+          Cl.principal(wallet1),
+          Cl.stringAscii("Creator")
+        ],
+        deployer
+      );
+
+      simnet.callPublicFn(
+        "circle-treasury",
+        "add-member",
+        [Cl.uint(1), Cl.principal(wallet2), Cl.stringAscii("Bob")],
+        wallet1
+      );
+
+      simnet.callPublicFn(
+        "circle-treasury",
+        "add-member",
+        [Cl.uint(1), Cl.principal(wallet3), Cl.stringAscii("Charlie")],
+        wallet1
+      );
+    });
+
+    describe("Bulk Expense Addition", () => {
+      it("adds multiple expenses successfully", () => {
+        const expenses = [
+          {
+            description: "Dinner",
+            amount: 300000000, // 300 STX
+            participants: [wallet1, wallet2, wallet3]
+          },
+          {
+            description: "Lunch",
+            amount: 150000000, // 150 STX
+            participants: [wallet1, wallet2]
+          },
+          {
+            description: "Coffee",
+            amount: 50000000, // 50 STX
+            participants: [wallet2, wallet3]
+          }
+        ];
+
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-expenses",
+          [
+            Cl.uint(1),
+            Cl.list(expenses.map(exp => Cl.tuple({
+              'description': Cl.stringAscii(exp.description),
+              'amount': Cl.uint(exp.amount),
+              'participants': Cl.list(exp.participants.map(p => Cl.principal(p)))
+            })))
+          ],
+          wallet1
+        );
+
+        expect(result).toBeOk(Cl.list([
+          Cl.uint(1), // First expense ID
+          Cl.uint(2), // Second expense ID
+          Cl.uint(3)  // Third expense ID
+        ]));
+      });
+
+      it("validates expenses individually", () => {
+        const expenses = [
+          {
+            description: "Valid",
+            amount: 100000000,
+            participants: [wallet1, wallet2]
+          },
+          {
+            description: "Invalid Participants",
+            amount: 50000000,
+            participants: [wallet1, wallet4] // wallet4 not a member
+          }
+        ];
+
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-expenses",
+          [
+            Cl.uint(1),
+            Cl.list(expenses.map(exp => Cl.tuple({
+              'description': Cl.stringAscii(exp.description),
+              'amount': Cl.uint(exp.amount),
+              'participants': Cl.list(exp.participants.map(p => Cl.principal(p)))
+            })))
+          ],
+          wallet1
+        );
+
+        expect(result).toBeErr(Cl.uint(202)); // ERR-INVALID-PARTICIPANT from second expense
+      });
+
+      it("requires active circle membership", () => {
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-expenses",
+          [
+            Cl.uint(1),
+            Cl.list([Cl.tuple({
+              'description': Cl.stringAscii("Test"),
+              'amount': Cl.uint(100000000),
+              'participants': Cl.list([Cl.principal(wallet1)])
+            })])
+          ],
+          wallet3 // Not a member who can add expenses
+        );
+
+        expect(result).toBeErr(Cl.uint(200)); // ERR-UNAUTHORIZED
+      });
+
+      it("handles empty expense list", () => {
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-expenses",
+          [Cl.uint(1), Cl.list([])],
+          wallet1
+        );
+
+        expect(result).toBeErr(Cl.uint(201)); // ERR-INVALID-AMOUNT (empty list)
+      });
+    });
+
+    describe("Bulk Debt Settlement", () => {
+      beforeEach(() => {
+        // Create some expenses to generate debts
+        simnet.callPublicFn(
+          "circle-treasury",
+          "add-expense",
+          [
+            Cl.uint(1),
+            Cl.stringAscii("Dinner"),
+            Cl.uint(300000000),
+            Cl.list([Cl.principal(wallet1), Cl.principal(wallet2), Cl.principal(wallet3)])
+          ],
+          wallet1
+        );
+
+        simnet.callPublicFn(
+          "circle-treasury",
+          "add-expense",
+          [
+            Cl.uint(1),
+            Cl.stringAscii("Lunch"),
+            Cl.uint(200000000),
+            Cl.list([Cl.principal(wallet2), Cl.principal(wallet3)])
+          ],
+          wallet2
+        );
+      });
+
+      it("settles multiple debts successfully", () => {
+        const settlements = [
+          { creditor: wallet1 }, // wallet2 owes wallet1 from dinner
+          { creditor: wallet2 }  // wallet3 owes wallet2 from lunch
+        ];
+
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "settle-multiple-debts",
+          [
+            Cl.uint(1),
+            Cl.list(settlements.map(s => Cl.tuple({
+              'creditor': Cl.principal(s.creditor)
+            })))
+          ],
+          wallet2 // wallet2 settling debts
+        );
+
+        expect(result).toBeOk(Cl.list([
+          Cl.uint(1), // First settlement ID
+          Cl.uint(2)  // Second settlement ID
+        ]));
+      });
+
+      it("handles debts with no balance", () => {
+        const settlements = [
+          { creditor: wallet1 }, // Valid debt
+          { creditor: wallet3 }  // No debt between wallet2 and wallet3
+        ];
+
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "settle-multiple-debts",
+          [
+            Cl.uint(1),
+            Cl.list(settlements.map(s => Cl.tuple({
+              'creditor': Cl.principal(s.creditor)
+            })))
+          ],
+          wallet2
+        );
+
+        expect(result).toBeErr(Cl.uint(205)); // ERR-NO-DEBT from second settlement
+      });
+
+      it("requires active membership", () => {
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "settle-multiple-debts",
+          [
+            Cl.uint(1),
+            Cl.list([Cl.tuple({
+              'creditor': Cl.principal(wallet1)
+            })])
+          ],
+          wallet4 // Not a member
+        );
+
+        expect(result).toBeErr(Cl.uint(206)); // ERR-MEMBER-NOT-FOUND
+      });
+    });
+
+    describe("Bulk Member Addition", () => {
+      it("adds multiple members successfully", () => {
+        const newMembers = [
+          { member: wallet2, nickname: "Bob" },
+          { member: wallet3, nickname: "Charlie" },
+          { member: wallet4, nickname: "David" }
+        ];
+
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-members",
+          [
+            Cl.uint(1),
+            Cl.list(newMembers.map(m => Cl.tuple({
+              'member': Cl.principal(m.member),
+              'nickname': Cl.stringAscii(m.nickname)
+            })))
+          ],
+          wallet1 // Creator
+        );
+
+        expect(result).toBeOk(Cl.list([
+          Cl.bool(true), // First addition success
+          Cl.bool(true), // Second addition success
+          Cl.bool(true)  // Third addition success
+        ]));
+      });
+
+      it("validates member limits", () => {
+        // Try to add more members than the limit allows
+        const manyMembers = Array.from({length: 48}, (_, i) => ({
+          member: accounts.get(`wallet_${i + 5}`)!, // wallet_5 onwards
+          nickname: `User${i + 5}`
+        }));
+
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-members",
+          [
+            Cl.uint(1),
+            Cl.list(manyMembers.map(m => Cl.tuple({
+              'member': Cl.principal(m.member),
+              'nickname': Cl.stringAscii(m.nickname)
+            })))
+          ],
+          wallet1
+        );
+
+        expect(result).toBeErr(Cl.uint(210)); // ERR-MAX-MEMBERS
+      });
+
+      it("requires creator authorization", () => {
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-members",
+          [
+            Cl.uint(1),
+            Cl.list([Cl.tuple({
+              'member': Cl.principal(wallet4),
+              'nickname': Cl.stringAscii("Hacker")
+            })])
+          ],
+          wallet2 // Not creator
+        );
+
+        expect(result).toBeErr(Cl.uint(200)); // ERR-UNAUTHORIZED
+      });
+
+      it("handles duplicate members in bulk", () => {
+        // Add wallet2 first
+        simnet.callPublicFn(
+          "circle-treasury",
+          "add-member",
+          [Cl.uint(1), Cl.principal(wallet2), Cl.stringAscii("Bob")],
+          wallet1
+        );
+
+        // Try to add wallet2 again in bulk
+        const { result } = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-members",
+          [
+            Cl.uint(1),
+            Cl.list([Cl.tuple({
+              'member': Cl.principal(wallet2),
+              'nickname': Cl.stringAscii("Bob2")
+            })])
+          ],
+          wallet1
+        );
+
+        expect(result).toBeErr(Cl.uint(209)); // ERR-MEMBER-EXISTS
+      });
+    });
+
+    describe("Bulk Operation Integration", () => {
+      it("combines bulk operations in complex workflow", () => {
+        // 1. Bulk add members
+        simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-members",
+          [
+            Cl.uint(1),
+            Cl.list([
+              Cl.tuple({
+                'member': Cl.principal(wallet2),
+                'nickname': Cl.stringAscii("Bob")
+              }),
+              Cl.tuple({
+                'member': Cl.principal(wallet3),
+                'nickname': Cl.stringAscii("Charlie")
+              }),
+              Cl.tuple({
+                'member': Cl.principal(wallet4),
+                'nickname': Cl.stringAscii("David")
+              })
+            ])
+          ],
+          wallet1
+        );
+
+        // 2. Bulk add expenses
+        simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-expenses",
+          [
+            Cl.uint(1),
+            Cl.list([
+              Cl.tuple({
+                'description': Cl.stringAscii("Dinner"),
+                'amount': Cl.uint(400000000),
+                'participants': Cl.list([Cl.principal(wallet1), Cl.principal(wallet2), Cl.principal(wallet3), Cl.principal(wallet4)])
+              }),
+              Cl.tuple({
+                'description': Cl.stringAscii("Drinks"),
+                'amount': Cl.uint(100000000),
+                'participants': Cl.list([Cl.principal(wallet2), Cl.principal(wallet3), Cl.principal(wallet4)])
+              })
+            ])
+          ],
+          wallet1
+        );
+
+        // 3. Bulk settle debts
+        simnet.callPublicFn(
+          "circle-treasury",
+          "settle-multiple-debts",
+          [
+            Cl.uint(1),
+            Cl.list([
+              Cl.tuple({'creditor': Cl.principal(wallet1)}), // wallet2 settles with wallet1
+              Cl.tuple({'creditor': Cl.principal(wallet1)})  // wallet3 settles with wallet1
+            ])
+          ],
+          wallet2
+        );
+
+        // Verify balances are updated
+        const balance1 = simnet.callReadOnlyFn(
+          "circle-treasury",
+          "get-balance",
+          [Cl.uint(1), Cl.principal(wallet2), Cl.principal(wallet1)],
+          wallet1
+        );
+        expect(balance1.result).toBeUint(0); // Debt settled
+
+        const balance2 = simnet.callReadOnlyFn(
+          "circle-treasury",
+          "get-balance",
+          [Cl.uint(1), Cl.principal(wallet3), Cl.principal(wallet1)],
+          wallet1
+        );
+        expect(balance2.result).toBeUint(0); // Debt settled
+      });
+
+      it("handles paused circle for bulk operations", () => {
+        // Pause the circle
+        simnet.callPublicFn(
+          "circle-treasury",
+          "pause-circle",
+          [Cl.uint(1)],
+          wallet1
+        );
+
+        // Try bulk operations
+        const expenseResult = simnet.callPublicFn(
+          "circle-treasury",
+          "add-multiple-expenses",
+          [
+            Cl.uint(1),
+            Cl.list([Cl.tuple({
+              'description': Cl.stringAscii("Test"),
+              'amount': Cl.uint(100000000),
+              'participants': Cl.list([Cl.principal(wallet1)])
+            })])
+          ],
+          wallet1
+        );
+
+        expect(expenseResult.result).toBeErr(Cl.uint(208)); // ERR-CIRCLE-PAUSED
+
+        const settlementResult = simnet.callPublicFn(
+          "circle-treasury",
+          "settle-multiple-debts",
+          [
+            Cl.uint(1),
+            Cl.list([Cl.tuple({'creditor': Cl.principal(wallet1)})])
+          ],
+          wallet2
+        );
+
+        expect(settlementResult.result).toBeErr(Cl.uint(208)); // ERR-CIRCLE-PAUSED
+      });
+    });
+  });
 });

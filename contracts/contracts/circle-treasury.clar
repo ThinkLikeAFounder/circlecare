@@ -527,3 +527,106 @@
     false
   )
 )
+
+;; Bulk Operations
+
+;; Add multiple expenses in one transaction (up to 10)
+(define-private (add-expense-internal
+  (expense-data {description: (string-ascii 200), amount: uint, participants: (list 20 principal)}))
+  (let
+    (
+      (circle-id (get circle-id expense-data))
+      (description (get description expense-data))
+      (amount (get amount expense-data))
+      (participants (get participants expense-data))
+    )
+    ;; Call the main add-expense function
+    (add-expense circle-id description amount participants)
+  )
+)
+
+;; Add multiple expenses in one transaction
+(define-public (add-multiple-expenses
+  (circle-id uint)
+  (expenses (list 10 {description: (string-ascii 200), amount: uint, participants: (list 20 principal)})))
+  (let
+    (
+      (circle (unwrap! (map-get? circles circle-id) ERR-CIRCLE-NOT-FOUND))
+      (member-key {circle-id: circle-id, member: tx-sender})
+    )
+    ;; Basic validations
+    (asserts! (not (get paused circle)) ERR-CIRCLE-PAUSED)
+    (asserts! (get active (unwrap! (map-get? members member-key) ERR-MEMBER-NOT-FOUND)) ERR-UNAUTHORIZED)
+    (asserts! (> (len expenses) u0) ERR-INVALID-AMOUNT)
+
+    ;; Process all expenses - each will validate individually
+    (ok (map add-expense-internal
+      (map (lambda (expense) (merge expense {circle-id: circle-id})) expenses)))
+  )
+)
+
+;; Settle multiple debts in one transaction (up to 10)
+(define-private (settle-debt-internal (settlement-data {creditor: principal}))
+  (let
+    (
+      (circle-id (get circle-id settlement-data))
+      (creditor (get creditor settlement-data))
+    )
+    ;; Call the main settle function
+    (settle-debt-stx circle-id creditor)
+  )
+)
+
+;; Settle multiple debts in one transaction
+(define-public (settle-multiple-debts
+  (circle-id uint)
+  (settlements (list 10 {creditor: principal})))
+  (let
+    (
+      (circle (unwrap! (map-get? circles circle-id) ERR-CIRCLE-NOT-FOUND))
+      (member-key {circle-id: circle-id, member: tx-sender})
+    )
+    ;; Basic validations
+    (asserts! (not (get paused circle)) ERR-CIRCLE-PAUSED)
+    (asserts! (get active (unwrap! (map-get? members member-key) ERR-MEMBER-NOT-FOUND)) ERR-UNAUTHORIZED)
+    (asserts! (> (len settlements) u0) ERR-INVALID-AMOUNT)
+
+    ;; Process all settlements - each will validate individually
+    (ok (map settle-debt-internal
+      (map (lambda (settlement) (merge settlement {circle-id: circle-id})) settlements)))
+  )
+)
+
+;; Bulk add members to circle (up to 10)
+(define-private (add-member-internal
+  (member-data {member: principal, nickname: (string-ascii 32)}))
+  (let
+    (
+      (circle-id (get circle-id member-data))
+      (member (get member member-data))
+      (nickname (get nickname member-data))
+    )
+    ;; Call the main add-member function
+    (add-member circle-id member nickname)
+  )
+)
+
+;; Add multiple members in one transaction
+(define-public (add-multiple-members
+  (circle-id uint)
+  (new-members (list 10 {member: principal, nickname: (string-ascii 32)})))
+  (let
+    (
+      (circle (unwrap! (map-get? circles circle-id) ERR-CIRCLE-NOT-FOUND))
+    )
+    ;; Basic validations
+    (asserts! (is-eq tx-sender (get creator circle)) ERR-UNAUTHORIZED)
+    (asserts! (not (get paused circle)) ERR-CIRCLE-PAUSED)
+    (asserts! (> (len new-members) u0) ERR-INVALID-AMOUNT)
+    (asserts! (<= (+ (get member-count circle) (len new-members)) MAX-MEMBERS) ERR-MAX-MEMBERS)
+
+    ;; Process all member additions - each will validate individually
+    (ok (map add-member-internal
+      (map (lambda (member-data) (merge member-data {circle-id: circle-id})) new-members)))
+  )
+)
